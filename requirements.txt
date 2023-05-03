@@ -1,0 +1,19 @@
+# dl
+torch>=2.0.0
+datasets
+transformers
+evaluate
+accelerate
+
+# data
+numpy
+pandas
+scikit-learn
+
+# utils
+typer
+torchinfo
+neptune-client<1.0.0  # neptune-client 1.0.0 is not compatible with transformers <4.28.1 yet
+nlpaug
+nltk
+scipy

@@ -1,0 +1,17 @@
+{
+    "default": {
+        "learning_rate": 1e-5,
+        "batch_size": 32,
+        "max_epochs": 1,
+        "eval_steps": 600
+    },
+
+    "fewshot": {
+        "samples_per_class": 8,
+        "num_folds": 5,
+        "learning_rate": 1e-5,
+        "batch_size": 32,
+        "max_epochs": 10,
+        "eval_steps": 10
+    }
+}
