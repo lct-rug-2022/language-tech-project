@@ -177,7 +177,7 @@ def _get_metrics_function():
         labels = labels.astype(int)
         return {
             **metric_f1.compute(predictions=predictions, references=labels, average='macro'),
-            'f1_all': metric_f1.compute(predictions=predictions, references=labels, average=None)['f1']
+            'f1_all': metric_f1.compute(predictions=predictions, references=labels, average=None)['f1'].tolist()
         }
 
     return _compute_metrics

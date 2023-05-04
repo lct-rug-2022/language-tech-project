@@ -48,10 +48,10 @@ ALL INSIDE REPO
    module load Python/3.10.4-GCCcore-11.3.0
    module load GCC/11.3.0
    ```
-3. Create new venv and make `.venv` alias in the folder
+3. Create new venv and make `.venv` alias in the folder (CHANGE HOME ROOT)
     ```shell
-    python3 -m venv /home/$USER/.envs/language-tech-project
-    ln -d -s /home/$USER/.envs/language-tech-project .venv
+    python3 -m venv ~/.envs/language-tech-project
+    ln -d -s ~/.envs/language-tech-project .venv
     ```
 4. Install libs 
     ```shell
@@ -62,6 +62,7 @@ ALL INSIDE REPO
     ```shell
     mkdir -p /scratch/$USER/language-tech-project/results
     ln -d -s /scratch/$USER/language-tech-project/results results
+    ```
 6. Make `models` folder at `/scratch` to log there (more space)
     ```shell
     mkdir -p /scratch/$USER/language-tech-project/models
@@ -82,7 +83,7 @@ Ether run sbatch jobs only or setup modules (see above) and activate venv.
    Or setup PyCharm deployment (settings -> deployment -> add new -> SFTP)
 1. Run job script 
     ```shell
-    sbatch scripts/values-task/train.sh --base-model=roberta-base [other options]
+    sbatch values-task/train.sh --base-model=roberta-base [other options]
     ```
 2. Monitor status with 
     ```shell
