@@ -3,6 +3,7 @@ import json
 import random
 import time
 from collections import defaultdict
+from io import StringIO
 from pathlib import Path
 import typing as tp
 
@@ -67,7 +68,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         # Load dataset
         self.split = split
         self.samples_per_class = samples_per_class
-        self.dataset, self.class_names = self._load_hf_dataset(dataset_folder, split, samples_per_class=samples_per_class)
+        self.dataset, self.class_names, self.ids = self._load_hf_dataset(dataset_folder, split, samples_per_class=samples_per_class)
         self.tokenizer = tokenizer
         self.aug_type = aug_type
         self.include_stance = include_stance
@@ -88,7 +89,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         return df_labels
 
     @staticmethod
-    def _load_hf_dataset(dataset_folder: Path, split: str, samples_per_class: tp.Optional[int] = None) -> tp.Tuple[Dataset, tp.List[str]]:
+    def _load_hf_dataset(dataset_folder: Path, split: str, samples_per_class: tp.Optional[int] = None) -> tp.Tuple[Dataset, tp.List[str], tp.List[str]]:
         """Load dataset from files
         :param dataset_folder: folder with dataset files (arguments-*.tsv, labels-*.tsv)
         :param split: eather "train", "validation", "test"
@@ -114,7 +115,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         dataset = Dataset.from_pandas(_df)
         # dataset.cast_column('labels', feature=Sequence(Value(dtype='int64'), length=20))
 
-        return dataset, class_names
+        return dataset, class_names, _df['id'].tolist()
 
     def __len__(self) -> int:
         return len(self.dataset)
@@ -324,7 +325,7 @@ def main(
         print('\n', '-' * 32, f'Fold {i + 1}/{num_folds} Training...', '-' * 32, '\n')
 
         # train itself
-        trainer.train()
+        # trainer.train()
 
         # save model
         if save_model:
@@ -352,6 +353,13 @@ def main(
                 for k, v in fold_metrics.items():
                     if 'f1_all' not in k:
                         folds_neptune_callback.run[f'finetuning/folds_metrics/{k}'].append(v)
+
+                # save predictions file to neptune
+                prob_predictions = expit(ds_prediction.predictions)
+                df = pd.DataFrame(prob_predictions, columns=ds.class_names, index=ds.ids)
+                csv_buffer = StringIO()
+                df.to_csv(csv_buffer, index=True, index_label='id')
+                folds_neptune_callback.run[f'predictions/fold-{i+1}-{metric_key_prefix}'].upload(neptune.types.File.from_stream(csv_buffer, extension="csv"))
 
         if not skip_neptune:
             folds_neptune_callback.run[f'fold-{i+1}/final_metrics'] = final_metrics
