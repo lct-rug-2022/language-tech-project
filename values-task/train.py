@@ -177,6 +177,7 @@ def _get_metrics_function():
         labels = labels.astype(int)
         return {
             **metric_f1.compute(predictions=predictions, references=labels, average='macro'),
+            'f1_all': metric_f1.compute(predictions=predictions, references=labels, average=None)['f1']
         }
 
     return _compute_metrics
@@ -340,7 +341,7 @@ def main(
             ds_prediction = trainer.predict(ds, metric_key_prefix=metric_key_prefix)
 
             final_metrics.update({
-                **{k: v for k, v in ds_prediction.metrics.items() if k in [f'{metric_key_prefix}_f1', f'{metric_key_prefix}_accuracy']}
+                **{k: v for k, v in ds_prediction.metrics.items() if k in [f'{metric_key_prefix}_f1', f'{metric_key_prefix}_f1_all']}
             })
 
         print('final_metrics', final_metrics)
