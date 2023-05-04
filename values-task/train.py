@@ -67,7 +67,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         # Load dataset
         self.split = split
         self.samples_per_class = samples_per_class
-        self.dataset = self._load_hf_dataset(dataset_folder, split, samples_per_class=samples_per_class)
+        self.dataset, self.class_names = self._load_hf_dataset(dataset_folder, split, samples_per_class=samples_per_class)
         self.tokenizer = tokenizer
         self.aug_type = aug_type
         self.include_stance = include_stance
@@ -88,17 +88,18 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         return df_labels
 
     @staticmethod
-    def _load_hf_dataset(dataset_folder: Path, split: str, samples_per_class: tp.Optional[int] = None) -> Dataset:
+    def _load_hf_dataset(dataset_folder: Path, split: str, samples_per_class: tp.Optional[int] = None) -> tp.Tuple[Dataset, tp.List[str]]:
         """Load dataset from files
         :param dataset_folder: folder with dataset files (arguments-*.tsv, labels-*.tsv)
         :param split: eather "train", "validation", "test"
         :param samples_per_class: if not None, select k samples per class, class can intersect
-        :return: HF dataset with columns ['id', 'premise', 'conclusion', 'stance', 'labels']
+        :return: HF dataset with columns ['id', 'premise', 'conclusion', 'stance', 'labels'] and class names list
         """
         _df_labels = pd.read_csv(dataset_folder / f'labels-{split}.tsv', sep='\t')
         _df_labels = _df_labels.rename(columns={'Argument ID': 'id'})
         if samples_per_class is not None:
             _df_labels = ValueEval2023Dataset._select_samples_per_class(_df_labels, samples_per_class)
+        class_names = _df_labels.drop('id', axis=1).columns.tolist()
         _df_labels['labels'] = _df_labels.drop('id', axis=1).values.tolist()
         _df_labels = _df_labels[['id', 'labels']]
         # make labels list of floats as suggested here
@@ -113,7 +114,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         dataset = Dataset.from_pandas(_df)
         # dataset.cast_column('labels', feature=Sequence(Value(dtype='int64'), length=20))
 
-        return dataset
+        return dataset, class_names
 
     def __len__(self) -> int:
         return len(self.dataset)
@@ -228,7 +229,6 @@ def _get_trainer_args(params, hub_model_name, output_dir, push_to_hub=False):
 @app.command()
 def main(
         base_model: str = typer.Option('roberta-base', help='Pretrained model to finetune: HUB or Path'),
-        dataset_name: str = typer.Option('tweet_eval,sentiment', help='dataset name or name,sub_name to use (e.g. tweet_eval,sentiment): HUB available'),
         config_name: str = typer.Option('default', help='Config name to use: see params.json'),
         postfix: str = typer.Option('', help='Model name postfix'),
         push_to_hub: bool = typer.Option(False, help='Push model to HuggingFace Hub'),
@@ -238,7 +238,7 @@ def main(
         save_folder: Path = typer.Option(ROOT_FOLDER / 'models', dir_okay=True, writable=True, help='Folder to save trained model'),
 ):
     clear_base_model = base_model.replace('/', '-')
-    model_name_to_save = f'efl-full-{dataset_name}-{clear_base_model}-{config_name}'
+    model_name_to_save = f'ltp-{clear_base_model}-{config_name}'
     if postfix:
         model_name_to_save += f'{model_name_to_save}-{postfix}'
     output_dir = str(results_folder / model_name_to_save)
@@ -248,6 +248,7 @@ def main(
     # load config
     params = EDOS_EVAL_PARAMS[config_name.split('-')[0]]  # read base config
     params.update(EDOS_EVAL_PARAMS[config_name])  # update with specific config
+    aug_type = params.get('aug_type', None)
     samples_per_class = params.get('samples_per_class', None)
     num_folds = params.get('num_folds', 1)
 
@@ -255,14 +256,13 @@ def main(
 
     # create neptune run
     if not skip_neptune:
-        neptune_run = neptune.init_run(tags=['task:finetuning', f'data:{dataset_name}', f'folds:{num_folds}', f'k:{samples_per_class}', f'model:{base_model}', f'conf:{config_name}'])
+        neptune_run = neptune.init_run(tags=['task:finetuning', f'folds:{num_folds}', f'aug:{aug_type}', f'k:{samples_per_class}', f'model:{base_model}', f'conf:{config_name}'])
         neptune_object_id = neptune_run['sys/id'].fetch()
         print('neptune_object_id', neptune_object_id)
         neptune_run['finetuning/parameters'] = {
-            'task': 'finetuning',
             'base_model': base_model,
-            'dataset_name': dataset_name,
             'config_name': config_name,
+            'aug_type': aug_type,
             'samples_per_class': samples_per_class,
             'folds': num_folds,
         }
@@ -291,7 +291,7 @@ def main(
 
         # load data, inside each fold to keep selecting random [samples_per_class] samples each fold
 
-        train_dataset = ValueEval2023Dataset('train', tokenizer, aug_type='uca', samples_per_class=samples_per_class, include_stance=False)
+        train_dataset = ValueEval2023Dataset('train', tokenizer, aug_type=aug_type, samples_per_class=samples_per_class, include_stance=False)
         val_dataset = ValueEval2023Dataset('validation', tokenizer)
         test_dataset = ValueEval2023Dataset('test', tokenizer)
         print(f'train_dataset: {len(train_dataset)} \t val_dataset: {len(val_dataset)} \t test_dataset: {len(test_dataset)}')
@@ -340,16 +340,23 @@ def main(
 
             ds_prediction = trainer.predict(ds, metric_key_prefix=metric_key_prefix)
 
-            final_metrics.update({
-                **{k: v for k, v in ds_prediction.metrics.items() if k in [f'{metric_key_prefix}_f1', f'{metric_key_prefix}_f1_all']}
-            })
+            fold_metrics = {
+                f'{metric_key_prefix}_f1': ds_prediction.metrics[f'{metric_key_prefix}_f1'],
+                f'{metric_key_prefix}_f1_all': ds_prediction.metrics[f'{metric_key_prefix}_f1_all'],
+                **{f'{metric_key_prefix}_f1_{class_name}': f1_score for class_name, f1_score in zip(ds.class_names, ds_prediction.metrics[f'{metric_key_prefix}_f1_all'])}
+            }
+            final_metrics.update(fold_metrics)
+            print(metric_key_prefix, 'fold_metrics', fold_metrics)
 
-        print('final_metrics', final_metrics)
+            if not skip_neptune:
+                for k, v in fold_metrics.items():
+                    if 'f1_all' not in k:
+                        folds_neptune_callback.run[f'finetuning/folds_metrics/{k}'].append(v)
+
         if not skip_neptune:
             folds_neptune_callback.run[f'fold-{i+1}/final_metrics'] = final_metrics
-            for k, v in final_metrics.items():
-                folds_neptune_callback.run[f'finetuning/folds_metrics/{k}'].append(v)
             folds_neptune_callback.run.stop()
+
         time.sleep(5)
 
         for k, v in final_metrics.items():
@@ -358,7 +365,7 @@ def main(
     print('\n', '-' * 32, 'End', '-' * 32, '\n')
 
     average_fold_final_metrics = {
-        k: np.mean(v)
+        k: np.mean(v) if 'f1_all' not in k else np.mean(v, axis=0).tolist()
         for k, v in folds_metrics.items()
     }
     print('folds_metrics', folds_metrics)
