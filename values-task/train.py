@@ -325,7 +325,7 @@ def main(
         print('\n', '-' * 32, f'Fold {i + 1}/{num_folds} Training...', '-' * 32, '\n')
 
         # train itself
-        # trainer.train()
+        trainer.train()
 
         # save model
         if save_model:
