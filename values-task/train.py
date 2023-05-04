@@ -123,6 +123,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
     def _tokenize_function(self, examples: tp.Dict[str, tp.Any]) -> tp.Dict[str, tp.Any]:
         """Tokenize single example/examples in HF style, DataCollator expected to be applied after"""
         if self.include_stance:
+            #  TODO: add stance
             raise NotImplementedError('yet. conclusion [sep] stance [sep] premise')
         else:
             tokenized_examples = self.tokenizer(examples['conclusion'], examples['premise'], truncation=True, padding='do_not_pad')
