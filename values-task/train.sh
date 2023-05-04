@@ -2,7 +2,7 @@
 #SBATCH --time=2:00:00
 #SBATCH --partition=gpushort
 #SBATCH --gpus-per-node=a100.20gb:1
-#SBATCH --job-name=efl-nli
+#SBATCH --job-name=values-task
 #SBATCH --mem=20G
 
 
@@ -18,13 +18,11 @@ source .venv/bin/activate
 
 
 export $(cat .env | xargs)
-export NEPTUNE_PROJECT="lct-rug-2022/dl-efl-nli"
+export NEPTUNE_PROJECT="lct-rug-2022/language-tech-project"
 export TOKENIZERS_PARALLELISM=false
 
 
-python scripts/finetuning/train.py --base-model=roberta-large --config-name=original-fewshot $*
-python scripts/finetuning/train.py --base-model=roberta-large --config-name=original-fewshot-k64 $*
-python scripts/finetuning/train.py --base-model=roberta-large --config-name=original-full $*
+python scripts/finetuning/train.py $*
 
 
 deactivate

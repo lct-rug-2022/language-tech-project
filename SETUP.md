@@ -94,5 +94,6 @@ Ether run sbatch jobs only or setup modules (see above) and activate venv.
 
 Example of running job with values-task finetuning on roberta-base:
 ```shell
-sbatch scripts/values-task/train.sh --base-model=roberta-base --config-name=default
+sbatch values-task/train.sh --base-model=roberta-base --config-name=default
+sbatch values-task/train.sh --base-model=roberta-base --config-name=fewshot
 ```
