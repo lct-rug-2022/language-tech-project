@@ -97,4 +97,6 @@ Example of running job with values-task finetuning on roberta-base:
 ```shell
 sbatch values-task/train.sh --base-model=roberta-base --config-name=default
 sbatch values-task/train.sh --base-model=roberta-base --config-name=fewshot
+sbatch values-task/train.sh --base-model=roberta-large --config-name=default
+sbatch values-task/train.sh --base-model=roberta-large --config-name=fewshot
 ```
