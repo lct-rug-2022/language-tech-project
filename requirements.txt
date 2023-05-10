@@ -4,6 +4,7 @@ datasets
 transformers
 evaluate
 accelerate
+sentencepiece
 
 # data
 numpy
@@ -17,3 +18,4 @@ neptune-client<1.0.0  # neptune-client 1.0.0 is not compatible with transformers
 nlpaug
 nltk
 scipy
+gensim

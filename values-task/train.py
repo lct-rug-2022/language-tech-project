@@ -1,3 +1,4 @@
+import os
 import ast
 import json
 import random
@@ -15,6 +16,7 @@ from nlpaug import Augmenter
 import nlpaug.augmenter.char as nac
 import nlpaug.augmenter.word as naw
 import nlpaug.augmenter.sentence as nas
+import nlpaug.flow as naf
 from scipy.special import expit
 from transformers import AutoConfig, AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, \
     DataCollatorWithPadding, EarlyStoppingCallback, PreTrainedTokenizer
@@ -22,6 +24,8 @@ import evaluate
 import numpy as np
 from torchinfo import summary
 import nltk
+from nltk.corpus import stopwords
+import gensim.downloader as api
 from transformers.integrations import NeptuneCallback
 import neptune.new as neptune
 
@@ -35,6 +39,7 @@ torch.backends.cudnn.deterministic = True
 IN_COLAB = Path(__file__).parent.name == 'content'  # detect colab run
 SCRIPT_FOLDER = Path(__file__).parent
 ROOT_FOLDER = SCRIPT_FOLDER if IN_COLAB else SCRIPT_FOLDER.parent
+MODELS_DIR = f"{ROOT_FOLDER}/models/"
 with open(SCRIPT_FOLDER / 'params.json') as f:
     EDOS_EVAL_PARAMS = json.load(f)
 
@@ -49,7 +54,7 @@ print('IS_BF16_AVAILABLE', IS_BF16_AVAILABLE)
 
 
 nltk.download("punkt", quiet=True)
-
+stops = list(stopwords.words('english'))
 
 app = typer.Typer(add_completion=False)
 
@@ -133,27 +138,107 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
             **tokenized_examples
         }
 
-    def _augment_single_sent(self, text: str) -> tp.Tuple[str, str]:
-        """Augment single example"""
+    def _check_download_model(self, model_name: str):
+        """Check if word embedding models exist and download if not"""
+        if os.path.exists(f"{MODELS_DIR}{model_name}.bin"):
+            print("Model exists")
+        else:
+            print(f'Downloading {model_name} model...')
+            model = api.load(model_name)
+            model.save_word2vec_format(f"{MODELS_DIR}{model_name}.bin", binary=True)
 
-        if self.aug_type == 'uca':
+    def _get_augmenter(self, aug_type: str):
+        """Select Augment per aug_type"""
+        if aug_type == 'uca':
             # Select augmentation type to apply
             aug_class: Augmenter = random.choices(
                 [
-                    nac.RandomCharAug(action='delete', aug_char_p=0.15),
-                    nac.RandomCharAug(action='swap', aug_char_p=0.05),
-                    naw.RandomWordAug(action='delete', aug_p=0.15),
-                    naw.RandomWordAug(action='swap', aug_min=2, aug_max=2)
+                    nac.RandomCharAug(action='delete', aug_char_p=0.15, stopwords=stops),
+                    nac.RandomCharAug(action='swap', aug_char_p=0.05, stopwords=stops),
+                    naw.RandomWordAug(action='delete', aug_p=0.15, stopwords=stops),
+                    naw.RandomWordAug(action='swap', aug_min=2, aug_max=2, stopwords=stops)
                 ],
                 weights=(10, 10, 40, 40),  # probs of selecting each augmenter
                 k=1
             )[0]
-            # apply augmentation to the text
-            aug_text = aug_class.augment(text)[0]
-
-            return aug_text
+        # noising char
+        elif aug_type == 'char_ins':
+            aug_class = nac.RandomCharAug(action="insert", stopwords=stops)
+        elif aug_type == 'char_del':
+            aug_class = nac.RandomCharAug(action="delete", stopwords=stops)
+        elif aug_type == 'char_sub':
+            aug_class = nac.RandomCharAug(action="substitute", stopwords=stops)
+        elif aug_type == 'char_swap':
+            aug_class = nac.RandomCharAug(action="swap", stopwords=stops)
+        elif aug_type == 'char_key':
+            aug_class = nac.KeyboardAug(stopwords=stops)
+        # noising word
+        elif aug_type == 'word_crop':
+            aug_class = naw.RandomWordAug(action="crop", stopwords=stops)
+        elif aug_type == 'word_del':
+            aug_class = naw.RandomWordAug(action="delete", stopwords=stops)
+        elif aug_type == 'word_sub':
+            # TODO choose what words to use for substitution
+            aug_class = naw.RandomWordAug(action="substitute", target_words=['is', 'are', 'the', 'you', 'was', 'were', 'am'], stopwords=stops)
+        elif aug_type == 'word_swap':
+            aug_class = naw.RandomWordAug(action="swap", stopwords=stops)
+        elif aug_type == 'word_split':
+            aug_class = naw.SplitAug(stopwords=stops)
+        elif aug_type == 'word_spell':
+            aug_class = naw.SpellingAug(stopwords=stops)
+        elif aug_type == 'word_syn':
+            aug_class = naw.SynonymAug(stopwords=stops)
+        elif aug_type == 'word_emb_w2v':
+            self._check_download_model('word2vec-google-news-300')
+            aug_class = naw.WordEmbsAug(model_type='word2vec', model_path=f"{MODELS_DIR}word2vec-google-news-300.bin",
+                                        action="substitute", stopwords=stops)
+        elif aug_type == 'word_emb_glv':
+            self._check_download_model('glove-wiki-gigaword-100')
+            aug_class = naw.WordEmbsAug(model_type='fasttext', model_path=MODELS_DIR+'glove-wiki-gigaword-100.bin',
+                                        action="substitute", stopwords=stops)
+        elif aug_type == 'word_emb_ft':
+            self._check_download_model('fasttext-wiki-news-subwords-300')
+            aug_class = naw.WordEmbsAug(model_type='glove', model_path=MODELS_DIR+'fasttext-wiki-news-subwords-300.bin',
+                                        action="substitute", stopwords=stops)
+        elif aug_type == 'word_con_emb_roberta':
+            aug_class = naw.ContextualWordEmbsAug(model_path='roberta-base', action="substitute", stopwords=stops)
+        elif aug_type == 'word_con_emb_bert':
+            aug_class = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="substitute", stopwords=stops)
+        elif aug_type == 'word_con_emb_distilbert':
+            aug_class = naw.ContextualWordEmbsAug(model_path='distilbert-base-uncased', action="substitute", stopwords=stops)
+        elif aug_type == 'word_con_emb_squeezebert':
+            aug_class = naw.ContextualWordEmbsAug(model_path='squeezebert/squeezebert-uncased', action="substitute", stopwords=stops)
+        elif aug_type == 'word_con_emb_bart':
+            aug_class = naw.ContextualWordEmbsAug(model_path='facebook/bart-base', action="substitute", stopwords=stops)
+        elif aug_type == 'word_backtranslate':
+            aug_class = naw.BackTranslationAug(from_model_name='Helsinki-NLP/opus-mt-en-de', to_model_name='Helsinki-NLP/opus-mt-de-en',)
+        elif aug_type == 'sen_con_emb_gpt2':
+            aug_class = nas.ContextualWordEmbsForSentenceAug(model_path='gpt2')
+        elif aug_type == 'sen_con_emb_distilgpt2':
+            aug_class = nas.ContextualWordEmbsForSentenceAug(model_path='distilgpt2')
+        elif aug_type == 'sen_random':
+            aug_class = nas.RandomSentAug('random')
+        elif aug_type == 'sen_summ':
+            aug_class = nas.AbstSummAug('t5-small')
+        elif len(aug_type.split(',')) > 1:
+            augmenters = [self._get_augmenter(aug.strip()) for aug in aug_type.split(',')]
+            aug_class = naf.Sometimes(augmenters)
+        elif self.aug_type is None:
+            return None
         else:
             raise NotImplementedError(f'Augment {self.aug_type} not implemented')
+
+        return aug_class
+
+    def _augment_single_sent(self, text: str) -> tp.Tuple[str, str]:
+        """Augment single example"""
+
+        aug_class = self._get_augmenter(self.aug_type)
+        if aug_class is None:
+            return text
+        else:
+            aug_text = aug_class.augment(text)[0]
+            return aug_text
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
