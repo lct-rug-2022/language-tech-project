@@ -220,11 +220,11 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
             aug_class = nas.RandomSentAug('random')
         elif aug_type == 'sen_summ':
             aug_class = nas.AbstSummAug('t5-small')
+        elif self.aug_type is None:
+            return None
         elif len(aug_type.split(',')) > 1:
             augmenters = [self._get_augmenter(aug.strip()) for aug in aug_type.split(',')]
             aug_class = naf.Sometimes(augmenters)
-        elif self.aug_type is None:
-            return None
         else:
             raise NotImplementedError(f'Augment {self.aug_type} not implemented')
 
