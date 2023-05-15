@@ -54,6 +54,7 @@ print('IS_BF16_AVAILABLE', IS_BF16_AVAILABLE)
 
 
 nltk.download("punkt", quiet=True)
+nltk.download("stopwords", quiet=True)
 stops = list(stopwords.words('english'))
 
 app = typer.Typer(add_completion=False)
@@ -63,7 +64,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
     def __init__(self, split: str, tokenizer: PreTrainedTokenizer, aug_type: tp.Optional[str] = None, dataset_folder: tp.Optional[Path] = SCRIPT_FOLDER / 'data', include_stance: bool = False, samples_per_class: tp.Optional[int] = None):
         """
         Load dataset from files
-        :param split: eather "train", "validation", "test"
+        :param split: either "train", "validation", "test"
         :param tokenizer: HF tokenizer to apply online while sampling with `self[id]`
         :param aug_type: None, "uca" (original article) TODO: add augmentation
         :param dataset_folder: folder with dataset files (arguments-*.tsv, labels-*.tsv)
@@ -317,6 +318,7 @@ def _get_trainer_args(params, hub_model_name, output_dir, push_to_hub=False):
 def main(
         base_model: str = typer.Option('roberta-base', help='Pretrained model to finetune: HUB or Path'),
         config_name: str = typer.Option('default', help='Config name to use: see params.json'),
+        aug_type: str = typer.Option('uca', help='Argumentation type to use'),
         postfix: str = typer.Option('', help='Model name postfix'),
         push_to_hub: bool = typer.Option(False, help='Push model to HuggingFace Hub'),
         save_model: bool = typer.Option(False, help='Save model locally'),
@@ -335,7 +337,7 @@ def main(
     # load config
     params = EDOS_EVAL_PARAMS[config_name.split('-')[0]]  # read base config
     params.update(EDOS_EVAL_PARAMS[config_name])  # update with specific config
-    aug_type = params.get('aug_type', None)
+    #aug_type = params.get('aug_type', None)
     samples_per_class = params.get('samples_per_class', None)
     num_folds = params.get('num_folds', 1)
 
