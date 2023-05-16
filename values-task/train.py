@@ -223,9 +223,16 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
             aug_class = nas.AbstSummAug('t5-small')
         elif self.aug_type is None:
             return None
-        elif len(aug_type.split(',')) > 1:
-            augmenters = [self._get_augmenter(aug.strip()) for aug in aug_type.split(',')]
-            aug_class = naf.Sometimes(augmenters)
+        elif len(aug_type.split(':')) > 1:
+            aug_t = aug_type.split(':')[0] # random or all
+            augs = aug_type.split(':')[1] # list of augmenters
+            augmenters = [self._get_augmenter(aug.strip()) for aug in augs.split(',')]
+            if aug_t == 'random':
+                aug_class = naf.Sometimes(augmenters)
+            elif aug_t == 'all':
+                aug_class = naf.Sequential(augmenters)
+            else:
+                raise NotImplementedError(f'Augment {self.aug_type} not implemented')
         else:
             raise NotImplementedError(f'Augment {self.aug_type} not implemented')
 
