@@ -210,7 +210,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         elif aug_type == 'word_con_emb_squeezebert':
             aug_class = naw.ContextualWordEmbsAug(model_path='squeezebert/squeezebert-uncased', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_con_emb_bart':
-            aug_class = naw.ContextualWordEmbsAug(model_path='facebook/bart-base', action="substitute", stopwords=stops, device='cuda')
+            aug_class = naw.ContextualWordEmbsAug(model_path='facebook/bart-base', model_type='bart', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_backtranslate':
             aug_class = naw.BackTranslationAug(from_model_name='Helsinki-NLP/opus-mt-en-de', to_model_name='Helsinki-NLP/opus-mt-de-en', device='cuda')
         elif aug_type == 'sen_con_emb_gpt2':
