@@ -202,25 +202,25 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
             aug_class = naw.WordEmbsAug(model_type='glove', model_path=MODELS_DIR+'fasttext-wiki-news-subwords-300.bin',
                                         action="substitute", stopwords=stops)
         elif aug_type == 'word_con_emb_roberta':
-            aug_class = naw.ContextualWordEmbsAug(model_path='roberta-base', action="substitute", stopwords=stops)
+            aug_class = naw.ContextualWordEmbsAug(model_path='roberta-base', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_con_emb_bert':
-            aug_class = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="substitute", stopwords=stops)
+            aug_class = naw.ContextualWordEmbsAug(model_path='bert-base-uncased', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_con_emb_distilbert':
-            aug_class = naw.ContextualWordEmbsAug(model_path='distilbert-base-uncased', action="substitute", stopwords=stops)
+            aug_class = naw.ContextualWordEmbsAug(model_path='distilbert-base-uncased', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_con_emb_squeezebert':
-            aug_class = naw.ContextualWordEmbsAug(model_path='squeezebert/squeezebert-uncased', action="substitute", stopwords=stops)
+            aug_class = naw.ContextualWordEmbsAug(model_path='squeezebert/squeezebert-uncased', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_con_emb_bart':
-            aug_class = naw.ContextualWordEmbsAug(model_path='facebook/bart-base', action="substitute", stopwords=stops)
+            aug_class = naw.ContextualWordEmbsAug(model_path='facebook/bart-base', action="substitute", stopwords=stops, device='cuda')
         elif aug_type == 'word_backtranslate':
-            aug_class = naw.BackTranslationAug(from_model_name='Helsinki-NLP/opus-mt-en-de', to_model_name='Helsinki-NLP/opus-mt-de-en',)
+            aug_class = naw.BackTranslationAug(from_model_name='Helsinki-NLP/opus-mt-en-de', to_model_name='Helsinki-NLP/opus-mt-de-en', device='cuda')
         elif aug_type == 'sen_con_emb_gpt2':
-            aug_class = nas.ContextualWordEmbsForSentenceAug(model_path='gpt2')
+            aug_class = nas.ContextualWordEmbsForSentenceAug(model_path='gpt2', device='cuda')
         elif aug_type == 'sen_con_emb_distilgpt2':
-            aug_class = nas.ContextualWordEmbsForSentenceAug(model_path='distilgpt2')
+            aug_class = nas.ContextualWordEmbsForSentenceAug(model_path='distilgpt2', device='cuda')
         elif aug_type == 'sen_random':
             aug_class = nas.RandomSentAug('random')
         elif aug_type == 'sen_summ':
-            aug_class = nas.AbstSummAug('t5-small')
+            aug_class = nas.AbstSummAug('t5-small', device='cuda')
         elif self.aug_type is None:
             return None
         elif len(aug_type.split(':')) > 1:
