@@ -325,7 +325,7 @@ def _get_trainer_args(params, hub_model_name, output_dir, push_to_hub=False):
 def main(
         base_model: str = typer.Option('roberta-base', help='Pretrained model to finetune: HUB or Path'),
         config_name: str = typer.Option('default', help='Config name to use: see params.json'),
-        aug_type: str = typer.Option('uca', help='Argumentation type to use'),
+        aug_type: str = typer.Option(None, help='Argumentation type to use'),
         postfix: str = typer.Option('', help='Model name postfix'),
         push_to_hub: bool = typer.Option(False, help='Push model to HuggingFace Hub'),
         save_model: bool = typer.Option(False, help='Save model locally'),
