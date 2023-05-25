@@ -195,11 +195,11 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
                                         action="substitute", stopwords=stops)
         elif aug_type == 'word_emb_glv':
             self._check_download_model('glove-wiki-gigaword-100')
-            aug_class = naw.WordEmbsAug(model_type='fasttext', model_path=MODELS_DIR+'glove-wiki-gigaword-100.bin',
+            aug_class = naw.WordEmbsAug(model_type='glove', model_path=MODELS_DIR+'glove-wiki-gigaword-100.bin',
                                         action="substitute", stopwords=stops)
         elif aug_type == 'word_emb_ft':
             self._check_download_model('fasttext-wiki-news-subwords-300')
-            aug_class = naw.WordEmbsAug(model_type='glove', model_path=MODELS_DIR+'fasttext-wiki-news-subwords-300.bin',
+            aug_class = naw.WordEmbsAug(model_type='fastest', model_path=MODELS_DIR+'fasttext-wiki-news-subwords-300.bin',
                                         action="substitute", stopwords=stops)
         elif aug_type == 'word_con_emb_roberta':
             aug_class = naw.ContextualWordEmbsAug(model_path='roberta-base', action="substitute", stopwords=stops, device='cuda')
