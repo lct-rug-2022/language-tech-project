@@ -74,7 +74,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         # Load dataset
         self.split = split
         self.samples_per_class = samples_per_class
-        self.dataset, self.class_names, self.ids = self._load_hf_dataset(dataset_folder, split, samples_per_class=samples_per_class)
+        self.dataset, self.class_names, self.ids, self.cl = self._load_hf_dataset(dataset_folder, split, samples_per_class=samples_per_class)
         self.tokenizer = tokenizer
         self.aug_type = aug_type
         self.include_stance = include_stance
@@ -119,9 +119,11 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
         _df = _df_labels.merge(_df_texts, on='id')
 
         dataset = Dataset.from_pandas(_df)
+        cl = ClassLabel(names=list(set(class_names)))
+        #dataset = dataset.cast_column('labels', cl)
         # dataset.cast_column('labels', feature=Sequence(Value(dtype='int64'), length=20))
 
-        return dataset, class_names, _df['id'].tolist()
+        return dataset, class_names, _df['id'].tolist(), cl
 
     def __len__(self) -> int:
         return len(self.dataset)
@@ -199,7 +201,7 @@ class ValueEval2023Dataset(torch.utils.data.Dataset):
                                         action="substitute", stopwords=stops)
         elif aug_type == 'word_emb_ft':
             self._check_download_model('fasttext-wiki-news-subwords-300')
-            aug_class = naw.WordEmbsAug(model_type='fastest', model_path=MODELS_DIR+'fasttext-wiki-news-subwords-300.bin',
+            aug_class = naw.WordEmbsAug(model_type='fasttext', model_path=MODELS_DIR+'fasttext-wiki-news-subwords-300.bin',
                                         action="substitute", stopwords=stops)
         elif aug_type == 'word_con_emb_roberta':
             aug_class = naw.ContextualWordEmbsAug(model_path='roberta-base', action="substitute", stopwords=stops, device='cuda')
@@ -339,7 +341,7 @@ def main(
         model_name_to_save += f'{model_name_to_save}-{postfix}'
     output_dir = str(results_folder / model_name_to_save)
     model_save_folder = save_folder / model_name_to_save
-    hub_model_name = f'k4black/{model_name_to_save}'
+    hub_model_name = f'sara-nabhani/{model_name_to_save}'
 
     # load config
     params = EDOS_EVAL_PARAMS[config_name.split('-')[0]]  # read base config
@@ -392,10 +394,12 @@ def main(
         test_dataset = ValueEval2023Dataset('test', tokenizer)
         print(f'train_dataset: {len(train_dataset)} \t val_dataset: {len(val_dataset)} \t test_dataset: {len(test_dataset)}')
 
+        id2label = {train_dataset.cl.str2int(i): i for i in train_dataset.cl.names}
+        label2id = {v: k for k, v in id2label.items()}
         # load new fold pretrained model
-        # config = AutoConfig.from_pretrained(base_model, label2id=label2id, id2label=id2label)
+        config = AutoConfig.from_pretrained(base_model, label2id=label2id, id2label=id2label, problem_type='multi_label_classification')
         # model = AutoModelForSequenceClassification.from_pretrained(base_model, config=config, ignore_mismatched_sizes=True)
-        model = AutoModelForSequenceClassification.from_pretrained(base_model, ignore_mismatched_sizes=True, num_labels=20, problem_type='multi_label_classification')
+        model = AutoModelForSequenceClassification.from_pretrained(base_model, ignore_mismatched_sizes=True, config=config)
         summary(model)
 
         # create trainer
@@ -480,3 +484,4 @@ def main(
 
 if __name__ == '__main__':
     app()
+
