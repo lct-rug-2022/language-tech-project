@@ -24,7 +24,7 @@ ds_full_d_path = f"{SCRIPT_FOLDER}/data/dataset_full_delta.jsonl"
 ds_l0_path = f"{SCRIPT_FOLDER}/data/dataset_lvl0.jsonl"
 ds_l0_d_path = f"{SCRIPT_FOLDER}/data/dataset_lvl0_delta.jsonl"
 
-files = [ds_full_path, ds_full_d_path, ds_l0_path, ds_l0_d_path]
+files = [ds_l0_d_path]
 
 
 def load_dataset(df: pd.DataFrame, tokenizer) -> Dataset:
