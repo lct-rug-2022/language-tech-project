@@ -12,7 +12,7 @@ script_folder = Path(__file__).parent
 # Read data
 dataset = []
 
-with open(script_folder / 'threads.jsonl') as f:
+with open(script_folder / 'threads.jsonl', encoding="utf8") as f:
     for line in tqdm(f, total=65169, desc='Read Threads'):
         thread = json.loads(line)
 
