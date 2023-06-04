@@ -19,3 +19,7 @@ nlpaug
 nltk
 scipy
 gensim
+
+#plotting
+seaborn
+matplotlib
