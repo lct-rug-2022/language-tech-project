@@ -37,14 +37,14 @@ def main(
   data = data[(data['delta_awarded']==True) | (data['delta_awarded']==False)]
 
   # Assgin human value to each post and comment
-  columns_subset = ['LABEL_0',
-                  'LABEL_1', 'LABEL_2', 'LABEL_3',
-                  'LABEL_4', 'LABEL_5', 'LABEL_6',
-                  'LABEL_7', 'LABEL_8',
-                  'LABEL_9', 'LABEL_10', 'LABEL_11', 'LABEL_12',
-                  'LABEL_13', 'LABEL_14', 'LABEL_15',
-                  'LABEL_16', 'LABEL_17', 'LABEL_18',
-                  'LABEL_19']
+    columns_subset = ['Benevolence: dependability',
+           'Achievement', 'Benevolence: caring', 'Hedonism',
+           'Universalism: objectivity', 'Humility', 'Security: societal',
+           'Conformity: interpersonal', 'Self-direction: thought',
+           'Power: resources', 'Face', 'Power: dominance', 'Universalism: nature',
+           'Universalism: tolerance', 'Stimulation', 'Security: personal',
+           'Tradition', 'Universalism: concern', 'Conformity: rules',
+           'Self-direction: action']
   data['Human_Value'] = data[columns_subset].idxmax(axis=1)
 
   # Check value alignment of each comment and its post
