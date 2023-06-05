@@ -69,13 +69,13 @@ def main(
     x = np.arange(len(categories))
 
     # Plot the comparison of category distributions
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(16, 5))
     plt.bar(x - bar_width/2, subset1_counts, width=bar_width, label='Delta')
     plt.bar(x + bar_width/2, subset2_counts, width=bar_width, label='Non-Delta')
     plt.title('Comparison of Human Value Distributions in Delta vs Non-delta Comments')
     plt.xlabel('Human Value')
     plt.ylabel('Percentage')
-    plt.xticks(x, categories, rotation=90)
+    plt.xticks(x, categories, rotation=45, ha='right')
     plt.legend(title='Subset')
     #plt.show()
 
