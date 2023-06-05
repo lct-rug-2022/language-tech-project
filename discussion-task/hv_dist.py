@@ -43,22 +43,25 @@ def main(
            'Self-direction: action']
 
     data['Human Value'] = data[columns_subset].idxmax(axis=1)
+    data['Top3'] = data[columns_subset].apply(lambda x: x.nlargest(3).index.tolist(), axis=1)
 
-    # Subset of data with a large number of rows
+    # Subset with delta
     subset1 = data[data['delta_awarded'] == True]
+    HV_list_sub1 = pd.Series([item for sublist in subset1['Top3'] for item in sublist])
 
-    # Subset of data with a small number of rows
+    # Subset without delta
     subset2 = data[data['delta_awarded'] == False]
+    HV_list_sub2 = pd.Series([item for sublist in subset2['Top3'] for item in sublist])
 
-    # Calculate the percentage distribution of categories for each subset
-    subset1_counts = subset1['Human Value'].value_counts(normalize=True) * 100
-    subset2_counts = subset2['Human Value'].value_counts(normalize=True) * 100
+    # Calculate the percentage distribution of HVs for each subset
+    subset1_counts = HV_list_sub1.value_counts(normalize=True) * 100
+    subset2_counts = HV_list_sub2.value_counts(normalize=True) * 100
 
 
-    # Get the unique categories from both subsets
+    # Get the unique HVs from both subsets
     categories = np.union1d(subset1_counts.index, subset2_counts.index)
 
-    # Fill missing categories with zeros
+    # Fill missing with zeros
     subset1_counts = subset1_counts.reindex(categories, fill_value=0)
     subset2_counts = subset2_counts.reindex(categories, fill_value=0)
 
@@ -69,23 +72,25 @@ def main(
     x = np.arange(len(categories))
 
     # Plot the comparison of category distributions
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(16, 5))
     plt.bar(x - bar_width/2, subset1_counts, width=bar_width, label='Delta')
     plt.bar(x + bar_width/2, subset2_counts, width=bar_width, label='Non-Delta')
     plt.title('Comparison of Human Value Distributions in Delta vs Non-delta Comments')
     plt.xlabel('Human Value')
     plt.ylabel('Percentage')
-    plt.xticks(x, categories, rotation=90)
+    plt.xticks(x, categories, rotation=45,ha='right')
     plt.legend(title='Subset')
     #plt.show()
 
-    # Save the figure as a file (e.g., PNG format)
     plt.savefig('results/human_value_dist.png', dpi=300, bbox_inches='tight')  # Specify the desired filename and DPI
     
-    contingency_table = pd.crosstab(data['delta_awarded'], data['Human Value'])
+    data = data[['delta_awarded','Top3']]
+    data = data.explode('Top3')
+
+    contingency_table = pd.crosstab(data['delta_awarded'], data['Top3'])
 
     cramers_v_value = cramers_v(contingency_table.values)
     print("Cramér's V:", cramers_v_value)
-    
+
 if __name__ == '__main__':
     app()
