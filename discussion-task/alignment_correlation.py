@@ -66,7 +66,7 @@ def main(
   plt.show()
 
   # Save the figure as a PNG file
-  plt.savefig('/alignment_delta_distribution.png', dpi=300, bbox_inches='tight')  # Specify the filename and DPI
+  plt.savefig('alignment_delta_distribution.png', dpi=300, bbox_inches='tight')  # Specify the filename and DPI
 
   # Compute the point biserial correlation coefficient
   corr_coef, p_value = pointbiserialr(comments['Aligned_Value'], comments['delta_awarded'])
