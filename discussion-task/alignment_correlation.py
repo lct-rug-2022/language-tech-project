@@ -3,8 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import typer
-from scipy.stats import pointbiserialr
-
+import math
+from scipy.stats import chi2_contingency
 
 app = typer.Typer(add_completion=False)
 
@@ -25,6 +25,7 @@ def get_percentage(comments):
   print("The value alignment percentage for non-delta comments:", non_delta_alignment_percentage)
   
   return delta_alignment_percentage, non_delta_alignment_percentage
+
 
 @app.command()
 def main(
@@ -63,15 +64,18 @@ def main(
   ax.set_xticklabels(['Delta', 'Non-delta'], rotation=0)
   ax.set_ylabel('Percentage')
   plt.legend(title='Value Alignment',loc = 'center', bbox_to_anchor=(1.2, 0.5))
-  plt.show()
+  #plt.show()
 
   # Save the figure as a PNG file
   plt.savefig('alignment_delta_distribution.png', dpi=300, bbox_inches='tight')  # Specify the filename and DPI
 
-  # Compute the point biserial correlation coefficient
-  corr_coef, p_value = pointbiserialr(comments['Aligned_Value'], comments['delta_awarded'])
-  print(f'Correlation Coefficient: {corr_coef:.2f}')  
-  print(f'P-Value: {p_value:.2f}')
+  # Compute the phi coefficient of chi square
+  crosstab = pd.crosstab(comments["Aligned_Value"], comments["delta_awarded"])
+  stat, p, dof, fre= chi2_contingency(crosstab)
+  phi = math.sqrt(stat/len(comments))
+  print(f'Chi Square: {stat:.3f}')
+  print(f'Phi: {phi:.3f}')
+ 
 
 if __name__ == '__main__':
   app()
