@@ -22,7 +22,7 @@ export NEPTUNE_PROJECT="lct-rug-2022/language-tech-project"
 export TOKENIZERS_PARALLELISM=false
 
 
-python values-task/train.py $*
+python values-task/train_aug.py $*
 
 
 deactivate
